@@ -2,10 +2,32 @@ const express = require("express");
 const uuid = require("uuid");
 
 const app = express();
-
 app.use(express.json());
 
 const orders = [];
+
+const checkOrderId = (req, res, next) => {
+  const { id } = req.params;
+
+  const index = orders.findIndex(order => order.id === id);
+
+  if (index === -1) {
+    return res.status(404).json({ message: "Order not found" });
+  }
+
+  req.orderIndex = index
+  req.orderId = id
+
+  next()
+}
+
+const showModeRequest = (req, res, next) => {
+  console.log(`O método utilizado nessa rota foi ${req.method}, e a url da rota é ${req.url}`)
+
+  next()
+}
+
+app.use(showModeRequest)
 
 app.get("/order", (req, res) => {
   return res.status(201).json(orders);
@@ -22,15 +44,11 @@ app.post("/order", (req, res) => {
 });
 
 
-app.put("/order/:id", (req, res) => {
-  const { id } = req.params;
+app.put("/order/:id", checkOrderId, (req, res) => {
+  
   const { order, clientName, price } = req.body;
-
-  const index = orders.findIndex(order => order.id === id);
-
-  if (index === -1) {
-    return res.status(404).json({ message: "Order not found" });
-  }
+  const index = req.orderIndex
+  const id = req.orderId
 
   const updateOrder = { id, order, clientName, price, status: "Em preparação" };
   
@@ -40,15 +58,9 @@ app.put("/order/:id", (req, res) => {
 });
 
 
-app.delete("/order/:id", (req, res) => {
+app.delete("/order/:id", checkOrderId, (req, res) => {
 
-  const { id } = req.params;
-  const index = orders.findIndex(order => order.id === id);
-
-  if (index === -1) {
-    return res.status(404).json({ message: "Order not found" });
-  }
-
+  const index = req.orderIndex
   orders.splice(index, 1)
 
   return res.status(204).json(orders);
